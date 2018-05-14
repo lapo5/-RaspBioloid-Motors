@@ -2,42 +2,35 @@
 
 import rospy
 import sys
-import dynamixel_workbench as dw
+import dynamixel_workbench_toolbox as dw
 from motors.msg import *
 
 def motor_monitor():
 	rospy.init_node('motor_monitor', anonymous=True)
 
 	pub = []
-	superPublisher = rospy.Publisher('motors_info', MotorsStatus, queue_size=1)
-	workbench = dw.DynamixelWorkbench()
+	#superPublisher = rospy.Publisher('motors_info', MotorsStatus, queue_size=1)
+	workbench = dw.ExtendedDynamixelWorkbench()
 	workbench.begin("/dev/ttyACM0", 1000000)
 	isOK, cont, ids = workbench.scan(18)
 	for i in range(0, cont):
 		pub.append(rospy.Publisher('motors_info/'+str(ids[i]), MotorMsg, queue_size=1))
-	
-	motor_msg = []
-	for i in range(0,cont):
-		motor_msg.append(MotorMsg())
-	motors_status = MotorsStatus()
 
-	rate = rospy.Rate(1)
+	motor_msg = MotorMsg()
+	#motors_status = MotorsStatus()
+
+	rate = rospy.Rate(1000)
 	while not rospy.is_shutdown():
-		isOk, positions = workbench.readAllPresentPosition(cont)
-		isOk2, speeds = workbench.readAllPresentSpeed(cont)
-		isOk3, voltages = workbench.readAllPresentVoltage(cont)
-		isOk4, temperatures = workbench.readAllPresentTemperature(cont)
-		
-		if(isOk and isOk2 and isOk3 and isOk4):
-			for i in range(0, cont):
-				motor_msg[i].Pos = positions[i]
-				motor_msg[i].Speed = speeds[i]
-				motor_msg[i].Voltage = voltages[i]
-				motor_msg[i].Temperature = temperatures[i]
-				pub[i].publish(motor_msg[i])
+		for i in range(1, cont+1):
+			motor_msg.Pos = workbench.readPresentPosition(i)
+			motor_msg.Speed = workbench.readPresentSpeed(i)
+			motor_msg.Voltage = workbench.readPresentVoltage(i)
+			motor_msg.Temperature = workbench.readPresentTemperature(i)
 
-			motors_status.Motors = motor_msg
-			superPublisher.publish(motors_status)
+			pub[i-1].publish(motor_msg)
+
+			#motors_status.Motors = motor_msg
+			#superPublisher.publish(motors_status)
 			#rospy.loginfo(motor_msg)
 		rate.sleep()
 

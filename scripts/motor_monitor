@@ -2,7 +2,7 @@
 
 import rospy
 import sys
-import dynamixel_workbench_toolbox as dw
+import dynamixel_sdk as sdk
 from motors.msg import *
 
 def motor_monitor():
@@ -10,29 +10,47 @@ def motor_monitor():
 
 	pub = []
 	#superPublisher = rospy.Publisher('motors_info', MotorsStatus, queue_size=1)
-	workbench = dw.ExtendedDynamixelWorkbench()
-	workbench.begin("/dev/ttyACM0", 1000000)
-	isOK, cont, ids = workbench.scan(18)
-	for i in range(0, cont):
-		pub.append(rospy.Publisher('motors_info/'+str(ids[i]), MotorMsg, queue_size=1))
+	#workbench = dw.ExtendedDynamixelWorkbench()
+	#workbench.begin("/dev/ttyACM0", 1000000)
+	#isOK, cont, ids = workbench.scan(18)
+	portHandler = sdk.PortHandler("/dev/ttyACM0")
+	packetHandler = sdk.PacketHandler(1.0)
+	portHandler.openPort()
+	portHandler.setBaudRate(1000000)
+	
+	cont=2
+	for i in range(1, cont+1):
+		pub.append(rospy.Publisher('motors_info/%d' % i, MotorMsg, queue_size=2))
+		#workbench.itemWrite(i+1, "Return_Delay_Time", 0)
 
 	motor_msg = MotorMsg()
 	#motors_status = MotorsStatus()
 
-	rate = rospy.Rate(1000)
+	#rate = rospy.Rate(1000)
 	while not rospy.is_shutdown():
 		for i in range(1, cont+1):
-			motor_msg.Pos = workbench.readPresentPosition(i)
-			motor_msg.Speed = workbench.readPresentSpeed(i)
-			motor_msg.Voltage = workbench.readPresentVoltage(i)
-			motor_msg.Temperature = workbench.readPresentTemperature(i)
+			a, _, _ = packetHandler.read4ByteTxRx(portHandler, i, 36)
+			p = struct.pack("<I", a)
+			b1 = struct.unpack_from("<h", p)
+			b2 = struct.unpack_from("<h", p, 2)
+			motor_msg.Pos = b1[0]
+			motor_msg.Speed = b2[0] if b2[0] < 1024 else 1024-b2[0]
+			a, _, _ = packetHandler.read2ByteTxRx(portHandler, i, 42)
+			p = struct.pack("<H", a)
+			b1 = struct.unpack_from("<b", p)
+			b2 = struct.unpack_from("<b", p, 1)
+			motor_msg.Voltage = b1[0]
+			motor_msg.Temperature = b2[0]
+			#motor_msg.Speed = b2[0]
+			#motor_msg.Voltage = workbench.readPresentVoltage(i)
+			#motor_msg.Temperature = workbench.readPresentTemperature(i)
 
 			pub[i-1].publish(motor_msg)
 
 			#motors_status.Motors = motor_msg
 			#superPublisher.publish(motors_status)
 			#rospy.loginfo(motor_msg)
-		rate.sleep()
+		#rate.sleep()
 
 
 	# spin() simply keeps python from exiting until this node is stopped

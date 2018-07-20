@@ -2,41 +2,94 @@
 
 import rospy
 import sys
+from threading import Lock
 import dynamixel_sdk as sdk
 from motors.msg import *
+from motors.srv import *
+
+go = Lock()
+
+portHandler = sdk.PortHandler("/dev/ttyACM0")
+packetHandler = sdk.PacketHandler(1.0)
+portHandler.openPort()
+portHandler.setBaudRate(1000000)
+cont = 18
+
+def move_motor(req):
+	global packetHandler
+	global portHandler
+	go.acquire()
+	isOk, _ = packetHandler.write2ByteTxRx(port = portHandler,
+												dxl_id = req.id,
+												address = 24, # TORQUE
+												data = 1)
+	isOk, _ = packetHandler.write2ByteTxRx(port = portHandler,
+												dxl_id = req.id,
+												address = 32, # SPEED
+												data = req.vel)
+	isOk, _ = packetHandler.write2ByteTxRx(port = portHandler,
+												dxl_id = req.id,
+												address = 30, # POSITION
+												data = req.pos)
+	go.release()
+	return MoveMotorResponse(isOk)
+
+def torque_motor(req):
+	global packetHandler
+	global portHandler
+	go.acquire()
+	isOk, _ = packetHandler.write2ByteTxRx(port = portHandler,
+												dxl_id = req.id,
+												address = 24, # TORQUE
+												data = req.mode)
+	go.release()
+	return TorqueResponse(isOk)
+
+def torque_all(req):
+	global packetHandler
+	global cont
+	global portHandler
+	go.acquire()
+	for i in range(1, cont + 1):
+			isOk, _ = packetHandler.write2ByteTxRx(port = portHandler,
+												dxl_id = i,
+												address = 24, # TORQUE
+												data = req.mode)
+
+	go.release()
+	return TorqueAllResponse(1)
 
 def motor_monitor():
 	rospy.init_node('motor_monitor', anonymous=True)
 
 	pub = []
-	portHandler = sdk.PortHandler("/dev/ttyACM0")
-	packetHandler = sdk.PacketHandler(1.0)
-	portHandler.openPort()
-	portHandler.setBaudRate(1000000)
-	
-	cont=2
+
+	global packetHandler
+	global cont
 	for i in range(1, cont+1):
 		pub.append(rospy.Publisher('motors_info/%d' % i, MotorMsg, queue_size=2))
 		packetHandler.writeTxRx(port = portHandler,
-								dxl_id = i, 
+								dxl_id = i,
 								address = 5, # RETURN DELAY TIME
-								length = 1, 
+								length = 1,
 								data = [0])  # VALUE: 0us
 		packetHandler.writeTxRx(port = portHandler,
-								dxl_id = i, 
+								dxl_id = i,
 								address = 24, #TORQUE ENABLE
 								length = 1,
 								data = [1]) #VALUE: ON
 	motor_msg = MotorMsg()
 
-	#rate = rospy.Rate(1000)
+	rate = rospy.Rate(1000)
 	while not rospy.is_shutdown():
 		for i in range(1, cont+1):
+			go.acquire()
 			data, _, _ = packetHandler.readTxRx(port = portHandler,
-												dxl_id = i, 
+												dxl_id = i,
 												address = 36, # POSITION | SPEED | LOAD
 												length = 6)
-
+			go.release()
+			if(len(data) != 6): continue
 			pos = sdk.DXL_MAKEWORD(data[0], data[1])
 			speed = sdk.DXL_MAKEWORD(data[2], data[3])
 			load = sdk.DXL_MAKEWORD(data[4], data[5])
@@ -46,12 +99,19 @@ def motor_monitor():
 			motor_msg.Load = load if load < 1024 else 1024-load
 
 			pub[i-1].publish(motor_msg)
-			
-		#rate.sleep()
 
+			#rospy.loginfo(motor_msg)
+
+		rate.sleep()
 
 	# spin() simply keeps python from exiting until this node is stopped
 	rospy.spin()
 
+
+
+
 if __name__ == '__main__':
+	s1 = rospy.Service('move_motor', MoveMotor, move_motor)
+	s2 = rospy.Service('torque_motor', Torque, torque_motor)
+	s3 = rospy.Service('torque_all', TorqueAll, torque_all)
 	motor_monitor()

@@ -1,4 +1,4 @@
 int64 id
 int8 mode
 ---
-int64 result
+bool result

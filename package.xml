@@ -12,10 +12,10 @@
   <author email="alessio.deluca.iic96d@gmail.com">Alessio De Luca</author>
   <author email="marco.lapolla5@gmail.com">Marco Lapolla</author>
 
-
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>roscpp</build_depend>
+  <build_depend>roslaunch</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>std_msgs</build_depend>
 

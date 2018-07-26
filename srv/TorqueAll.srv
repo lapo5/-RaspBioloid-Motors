@@ -1,3 +1,3 @@
 int8 mode
 ---
-int64 result
+bool result

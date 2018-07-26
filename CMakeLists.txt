@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
    rospy
    std_msgs
    message_generation
+   roslaunch
 )
 
 add_message_files(
@@ -35,3 +36,9 @@ catkin_package(
 
 ## Build talker and listener
 include_directories(include ${catkin_INCLUDE_DIRS})
+
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+roslaunch_add_file_check(launch)

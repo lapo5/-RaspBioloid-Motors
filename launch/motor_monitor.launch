@@ -1,0 +1,11 @@
+<!-- Dynamixel Motors launch file -->
+
+<launch>
+  #### Motors ###########################################################
+
+  <node pkg="motors" type="motor_monitor" name="motor_monitor"
+    output="screen">
+  </node>
+
+
+</launch>

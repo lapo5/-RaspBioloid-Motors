@@ -2,4 +2,4 @@ int64 id
 int64 pos
 int64 vel
 ---
-int64 result
+bool result

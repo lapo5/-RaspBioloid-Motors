@@ -85,7 +85,22 @@ def motor_monitor():
 								dxl_id = i,
 								address = 24, #TORQUE ENABLE
 								length = 1,
-								data = [1]) #VALUE: ON
+								data = [1]) #VALUE: ON		
+		packetHandler.writeTxRx(port = portHandler,
+								dxl_id = i,
+								address = 14, #MAX TORQUE
+								length = 2,
+								data = [255, 3]) #VALUE: 1024		
+		packetHandler.writeTxRx(port = portHandler,
+								dxl_id = i,
+								address = 17, #ALARM LED
+								length = 1,
+								data = [0b00101111]) #VALUE: OVERLOAD + RANGE + OVERHEATING ANGLE LIMIT + VOLTAGE RANGE
+		packetHandler.writeTxRx(port = portHandler,
+								dxl_id = i,
+								address = 18, #ALARM SHUTDOWN
+								length = 1,
+								data = [0b00000101]) #VALUE: OVERLOAD + VOLTAGE RANGE
 		torque_state[i-1] = True
 	motor_msg = MotorMsg()
 

@@ -126,11 +126,11 @@ def stand_down():
 	time.sleep(1)
 	resp1 = move_motor(13, 180, 40)
 	resp1 = move_motor(14, 844, 40)
-	time.sleep(1)
+	time.sleep(0.5)
 
 	resp1 = move_motor(15, 689, 60)
 	resp1 = move_motor(16, 335, 60)
-	time.sleep(2)
+	time.sleep(3)
 
 	resp1 = move_motor(11, 300, 40)
 	resp1 = move_motor(12, 724, 40)
@@ -178,11 +178,11 @@ def from_initial_to_walk():
 	time.sleep(1)
 	resp1 = move_motor(13, 180, 40)
 	resp1 = move_motor(14, 844, 40)
-	time.sleep(1)
+	time.sleep(0.5)
 
 	resp1 = move_motor(15, 689, 60)
 	resp1 = move_motor(16, 335, 60)
-	time.sleep(2)
+	time.sleep(3)
 
 def from_walk_to_initial():
 	move_motor = rospy.ServiceProxy('move_motor', MoveMotor)
@@ -462,7 +462,7 @@ def walk():
 	pos = [301, 854, 279, 744, 462, 561, 358, 666, 507, 516, 364, 716, 248, 775, 671, 409, 507, 516]
 	move_all_motors(pos)
 
-	for i in range(0,10):
+	for i in range(0,4):
 
 		pos = [300, 853, 279, 744, 462, 561, 358, 666, 501, 510, 363, 721, 254, 777, 675, 402, 501, 510]
 		move_all_motors(pos)
@@ -583,6 +583,14 @@ def fall():
 
 	time.sleep(1)
 
+	#hands to protect
+	resp1 = move_motor(1, 540, 40)
+	resp1 = move_motor(2, 494, 40)
+	resp1 = move_motor(3, 213, 40)
+	resp1 = move_motor(4, 811, 40)
+	resp1 = move_motor(5, 512, 40)
+	resp1 = move_motor(6, 512, 40)
+
 	#start falling
 
 	resp1 = move_motor(11, 570, 40)
@@ -615,11 +623,4 @@ def fall():
 	resp1 = move_motor(11, 390, 40)
 	resp1 = move_motor(12, 634, 40)
 
-	#hands to protect
-	resp1 = move_motor(1, 540, 40)
-	resp1 = move_motor(2, 494, 40)
-	resp1 = move_motor(3, 213, 40)
-	resp1 = move_motor(4, 811, 40)
-	resp1 = move_motor(5, 512, 40)
-	resp1 = move_motor(6, 512, 40)
 

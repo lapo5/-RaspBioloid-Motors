@@ -22,7 +22,7 @@ def move_motor_client(mytype):
 		try:
 			torque_motor = rospy.ServiceProxy('torque_motor', Torque)
 			if(sys.argv >= 4):
-				resp1 = torque_motor(int(sys.argv[2]), bool(sys.argv[3]))
+				resp1 = torque_motor(int(sys.argv[2]), bool(int(sys.argv[3])))
 			else:
 				resp1 = torque_motor(13, True)
 			return resp1.result
@@ -33,7 +33,7 @@ def move_motor_client(mytype):
 		try:
 			torque_all = rospy.ServiceProxy('torque_all', TorqueAll)
 			if(sys.argv >= 3):
-				resp1 = torque_all(bool(sys.argv[2]))
+				resp1 = torque_all(bool(int(sys.argv[2])))
 			else:
 				resp1 = torque_all(True)
 			return resp1.result

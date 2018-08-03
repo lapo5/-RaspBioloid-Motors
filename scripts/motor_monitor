@@ -15,7 +15,7 @@ portHandler.openPort()
 portHandler.setBaudRate(1000000)
 cont = 18
 
-torque_state = [False for i in range(0, 18)]
+torque_state = [False for i in range(0, cont)]
 
 def move_motor(req):
 	global packetHandler
@@ -85,22 +85,42 @@ def motor_monitor():
 								dxl_id = i,
 								address = 24, #TORQUE ENABLE
 								length = 1,
-								data = [1]) #VALUE: ON		
+								data = [1]) #VALUE: ON
 		packetHandler.writeTxRx(port = portHandler,
 								dxl_id = i,
 								address = 14, #MAX TORQUE
 								length = 2,
-								data = [255, 3]) #VALUE: 1024		
+								data = [255, 3]) #VALUE: 1024
+		packetHandler.writeTxRx(port = portHandler,
+								dxl_id = i,
+								address = 12, #MIN/MAX VOLTAGE
+								length = 2,
+								data = [80, 140])
 		packetHandler.writeTxRx(port = portHandler,
 								dxl_id = i,
 								address = 17, #ALARM LED
 								length = 1,
-								data = [0b00101111]) #VALUE: OVERLOAD + RANGE + OVERHEATING ANGLE LIMIT + VOLTAGE RANGE
+								data = [0b00101111]) #VALUE: OVERLOAD + RANGE + OVERHEATING + ANGLE LIMIT + VOLTAGE RANGE
 		packetHandler.writeTxRx(port = portHandler,
 								dxl_id = i,
 								address = 18, #ALARM SHUTDOWN
 								length = 1,
-								data = [0b00000101]) #VALUE: OVERLOAD + VOLTAGE RANGE
+								data = [0b00000101]) #VALUE: OVERHEATING + VOLTAGE RANGE
+		packetHandler.writeTxRx(port = portHandler,
+								dxl_id = i,
+								address = 26, #COMPLIANCE MARGIN (SX/DX)
+								length = 2,
+								data = [1, 1]) #VALUE: MIN
+		packetHandler.writeTxRx(port = portHandler,
+								dxl_id = i,
+								address = 28, #COMPLIANCE SLOPE (SX/DX)
+								length = 2,
+								data = [16, 16]) #VALUE: 5 STEPS
+		packetHandler.writeTxRx(port = portHandler,
+								dxl_id = i,
+								address = 48, #PUNCH
+								length = 2,
+								data = [32, 0]) #VALUE: 64
 		torque_state[i-1] = True
 	motor_msg = MotorMsg()
 

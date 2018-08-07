@@ -14,11 +14,22 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>roslaunch</build_depend>
-  <build_depend>rospy</build_depend>
   <build_depend>motors_msgs</build_depend>
   <build_depend>motors_srvs</build_depend>
+  <build_depend>roslaunch</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>dynamixel_sdk</build_depend>
 
+  <build_export_depend>roslaunch</build_export_depend>
+  <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>motors_msgs</build_export_depend>
+  <build_export_depend>motors_srvs</build_export_depend>
+  <build_export_depend>dynamixel_sdk</build_export_depend>
+  
+  <exec_depend>roslaunch</exec_depend>
   <exec_depend>rospy</exec_depend>
+  <exec_depend>motors_msgs</exec_depend>
+  <exec_depend>motors_srvs</exec_depend>
+  <exec_depend>dynamixel_sdk</exec_depend>
 
 </package>

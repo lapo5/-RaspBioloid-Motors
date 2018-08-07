@@ -2,7 +2,7 @@
 
 import sys
 import rospy
-from motors.srv import *
+from motors_srvs.srv import *
 
 def move_motor_client(mytype):
 	if(mytype == 0):

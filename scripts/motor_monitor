@@ -4,8 +4,8 @@ import rospy
 import sys
 from threading import Lock
 import dynamixel_sdk as sdk
-from motors.msg import *
-from motors.srv import *
+from motors_msgs.msg import *
+from motors_srvs.srv import *
 
 go = Lock()
 

@@ -2,7 +2,7 @@
 
 import sys, time
 import rospy
-from motors.srv import *
+from motors_srvs.srv import *
 
 def move_all_motors(pos, vel=90):
 	rospy.wait_for_service('move_motor')

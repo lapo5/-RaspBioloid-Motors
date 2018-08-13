@@ -16,10 +16,16 @@ portHandler.setBaudRate(1000000)
 cont = 18
 
 torque_state = [False for i in range(0, cont)]
+goals = [-1 for i in range(0,cont)]
+
+for i in range(0,cont):
+  data, _, _ = packetHandler.readTxRx(portHandler, i+1, 30, 2)
+  goals[i] = sdk.DXL_MAKEWORD(data[0], data[1])
 
 def move_motor(req):
 	global packetHandler
 	global portHandler
+	global goals
 	go.acquire()
 	isOk, _ = packetHandler.write2ByteTxRx(port = portHandler,
 												dxl_id = req.id,
@@ -31,8 +37,9 @@ def move_motor(req):
 												data = req.vel)
 	isOk, _ = packetHandler.write2ByteTxRx(port = portHandler,
 												dxl_id = req.id,
-												address = 30, # POSITION
+												address = 30, # GOAL
 												data = req.pos)
+	goals[req.id-1] = req.pos
 	torque_state[req.id-1] = True
 	go.release()
 	return MoveMotorResponse(isOk == sdk.COMM_SUCCESS)
@@ -47,6 +54,8 @@ def torque_motor(req):
 												address = 24, # TORQUE
 												data = req.mode)
 	torque_state[req.id-1] = bool(req.mode)
+	data, _, _ = packetHandler.readTxRx(portHandler, req.id, 30, 2)
+	goals[req.id-1] = sdk.DXL_MAKEWORD(data[0], data[1])
 	go.release()
 	return TorqueResponse(isOk == sdk.COMM_SUCCESS)
 
@@ -62,6 +71,8 @@ def torque_all(req):
 												address = 24, # TORQUE
 												data = req.mode)
 			torque_state[i-1] = bool(req.mode)
+			data, _, _ = packetHandler.readTxRx(portHandler, i, 30, 2)
+			goals[i-1] = sdk.DXL_MAKEWORD(data[0], data[1])
 
 	go.release()
 	return TorqueAllResponse(isOk == sdk.COMM_SUCCESS)
@@ -74,8 +85,9 @@ def motor_monitor():
 	global packetHandler
 	global cont
 	global torque_state
+	global goals
 	for i in range(1, cont+1):
-		pub.append(rospy.Publisher('motors_info/%d' % i, MotorMsg, queue_size=2))
+		pub.append(rospy.Publisher('motors_info/%d' % i, MotorInfo, queue_size=2))
 		packetHandler.writeTxRx(port = portHandler,
 								dxl_id = i,
 								address = 5, # RETURN DELAY TIME
@@ -122,16 +134,16 @@ def motor_monitor():
 								length = 2,
 								data = [32, 0]) #VALUE: 64
 		torque_state[i-1] = True
-	motor_msg = MotorMsg()
+	motor_msg = MotorInfo()
 
 	rate = rospy.Rate(1000)
 	while not rospy.is_shutdown():
 		for i in range(1, cont+1):
 			go.acquire()
 			data, _, _ = packetHandler.readTxRx(port = portHandler,
-												dxl_id = i,
-												address = 36, # POSITION | SPEED | LOAD
-												length = 6)
+									dxl_id = i,
+									address = 36, # POSITION | SPEED | LOAD
+									length = 6)
 			motor_msg.Locked = torque_state[i-1]
 			go.release()
 			if(len(data) != 6): continue
@@ -144,6 +156,7 @@ def motor_monitor():
 			motor_msg.Pos = pos
 			motor_msg.Speed = speed if speed < 1024 else 1024-speed
 			motor_msg.Load = load if load < 1024 else 1024-load
+			motor_msg.Goal = goals[i-1]
 
 			pub[i-1].publish(motor_msg)
 

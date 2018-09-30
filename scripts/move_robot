@@ -1,137 +1,135 @@
 #!/usr/bin/env python
 
-import sys, time
-import rospy
-from motors_srvs.srv import *
 from animations import *
 
-def move_robot(mytype):
-	#Initial Pos
-	if(mytype == 0):
-		rospy.wait_for_service('move_motor')
-		try:
-			initial_position()
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
-	#Hello
-	if(mytype == 1):
-		rospy.wait_for_service('move_motor')
-		try:
-			say_hello()
 
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
+def move_robot(op_code):
+    # Initial Pos
+    if op_code == 0:
+        rospy.wait_for_service('move_motor')
+        try:
+            initial_position()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+    # Hello
+    if op_code == 1:
+        rospy.wait_for_service('move_motor')
+        try:
+            say_hello()
 
-	#Hello 2 hands
-	if(mytype == 2):
-		rospy.wait_for_service('move_motor')
-		try:
-			say_hello_2_hand()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
 
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
+    # Hello 2 hands
+    if op_code == 2:
+        rospy.wait_for_service('move_motor')
+        try:
+            say_hello_2_hand()
 
-	#Stand Down
-	if(mytype == 3):
-		rospy.wait_for_service('move_motor')
-		try:
-			stand_down()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
 
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
-	#STAND UP
-	if(mytype == 4):
-		rospy.wait_for_service('move_motor')
-		try:
-			stand_up()
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
+    # Stand Down
+    if op_code == 3:
+        rospy.wait_for_service('move_motor')
+        try:
+            stand_down()
 
-	#GORILLA
-	if(mytype == 5):
-		rospy.wait_for_service('move_motor')
-		move_motor = rospy.ServiceProxy('move_motor', MoveMotor)
-		try:
-			gorilla()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+    # STAND UP
+    if op_code == 4:
+        rospy.wait_for_service('move_motor')
+        try:
+            stand_up()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
 
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
+    # GORILLA
+    if op_code == 5:
+        rospy.wait_for_service('move_motor')
+        move_motor = rospy.ServiceProxy('move_motor', MoveMotor)
+        try:
+            gorilla()
+
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
+    # Walk
+    if op_code == 6:
+        rospy.wait_for_service('move_motor')
+        try:
+            walk()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
+    # Prepare To Walk
+    if op_code == 7:
+        rospy.wait_for_service('move_motor')
+        try:
+            from_initial_to_walk()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
+    # Return in Position from Walk
+    if op_code == 8:
+        rospy.wait_for_service('move_motor')
+        try:
+            from_walk_to_initial()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
+    # Walking sequence
+    if op_code == 10:
+        rospy.wait_for_service('move_motor')
+        try:
+            from_initial_to_walk()
+            walk()
+            from_walk_to_initial()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
+    # Fall (dangerous)
+    if op_code == 11:
+        rospy.wait_for_service('move_motor')
+        try:
+            fall()
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
+    # Feature
+    if op_code == 666:
+        rospy.wait_for_service('move_motor')
+        try:
+            move_motor = rospy.ServiceProxy('move_motor', MoveMotor)
+            resp1 = move_motor(2, 594, 80)
+            resp1 = move_motor(1, 430, 80)
+            time.sleep(1)
+            resp1 = move_motor(3, 215, 80)
+            resp1 = move_motor(4, 809, 80)
+            resp1 = move_motor(5, 365, 80)
+            resp1 = move_motor(6, 659, 80)
+            for i in range(0, 3):
+                resp1 = move_motor(2, 699, 90)
+                resp1 = move_motor(1, 325, 90)
+                time.sleep(1)
+                resp1 = move_motor(1, 430, 90)
+                resp1 = move_motor(2, 594, 90)
+                time.sleep(1)
+
+            resp1 = move_motor(5, 484, 60)
+            resp1 = move_motor(6, 540, 60)
+            resp1 = move_motor(2, 699, 90)
+            resp1 = move_motor(1, 325, 90)
+            resp1 = move_motor(3, 292, 60)
+            resp1 = move_motor(4, 732, 60)
+            resp1 = move_motor(1, 210, 60)
+            resp1 = move_motor(2, 814, 60)
+
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
 
 
-	#Walk
-	if(mytype == 6):
-		rospy.wait_for_service('move_motor')
-		try:
-			walk()
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
-
-
-	#Prepare To Walk
-	if(mytype == 7):
-		rospy.wait_for_service('move_motor')
-		try:
-			from_initial_to_walk()
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
-
-	#Return in Position from Walk
-	if(mytype == 8):
-		rospy.wait_for_service('move_motor')
-		try:
-			from_walk_to_initial()
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
-
-	#Walking sequence
-	if(mytype == 10):
-		rospy.wait_for_service('move_motor')
-		try:
-			from_initial_to_walk()
-			walk()
-			from_walk_to_initial()
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
-
-	#Fall (dangerous)
-	if(mytype == 11):
-		rospy.wait_for_service('move_motor')
-		try:
-			fall()
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
-
-	#Feature
-	if(mytype == 666):
-		rospy.wait_for_service('move_motor')
-		try:
-			move_motor = rospy.ServiceProxy('move_motor', MoveMotor)
-			resp1 = move_motor(2, 594, 80)
-			resp1 = move_motor(1, 430, 80)
-			time.sleep(1)
-			resp1 = move_motor(3, 215, 80)
-			resp1 = move_motor(4, 809, 80)
-			resp1 = move_motor(5, 365, 80)
-			resp1 = move_motor(6, 659, 80)
-			for i in range(0, 3):
-				resp1 = move_motor(2, 699, 90)
-				resp1 = move_motor(1, 325, 90)
-				time.sleep(1)
-				resp1 = move_motor(1, 430, 90)
-				resp1 = move_motor(2, 594, 90)
-				time.sleep(1)
-
-			resp1 = move_motor(5, 484, 60)
-			resp1 = move_motor(6, 540, 60)
-			resp1 = move_motor(2, 699, 90)
-			resp1 = move_motor(1, 325, 90)
-			resp1 = move_motor(3, 292, 60)
-			resp1 = move_motor(4, 732, 60)
-			resp1 = move_motor(1, 210, 60)
-			resp1 = move_motor(2, 814, 60)
-
-		except rospy.ServiceException, e:
-			print "Service call failed: %s"%e
 if __name__ == "__main__":
     mytype = int(sys.argv[1])
     move_robot(mytype)

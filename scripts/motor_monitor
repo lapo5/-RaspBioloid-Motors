@@ -14,18 +14,21 @@ portHandler.openPort()
 portHandler.setBaudRate(1000000)
 cont = 18
 
-torque_state = [False for i in range(0, cont)]
-goals = [-1 for i in range(0, cont)]
+goal_vec = [0 for i in range(0, cont)]
+pos_vec = [0 for i in range(0, cont)]
+speed_vec = [0 for i in range(0, cont)]
+load_vec = [0 for i in range(0, cont)]
+lock_vec = [False for i in range(0, cont)]
 
 for i in range(0, cont):
     data, _, _ = packetHandler.readTxRx(portHandler, i + 1, 30, 2)
-    goals[i] = sdk.DXL_MAKEWORD(data[0], data[1])
+    goal_vec[i] = sdk.DXL_MAKEWORD(data[0], data[1])
 
 
 def move_motor(req):
     global packetHandler
     global portHandler
-    global goals
+    global goal_vec
     go.acquire()
     ok, _ = packetHandler.write2ByteTxRx(port=portHandler,
                                            dxl_id=req.id,
@@ -39,8 +42,8 @@ def move_motor(req):
                                            dxl_id=req.id,
                                            address=30,  # GOAL
                                            data=req.pos)
-    goals[req.id - 1] = req.pos
-    torque_state[req.id - 1] = True
+    goal_vec[req.id - 1] = req.pos
+    lock_vec[req.id - 1] = True
     go.release()
     return MoveMotorResponse(ok == sdk.COMM_SUCCESS)
 
@@ -48,15 +51,15 @@ def move_motor(req):
 def torque_motor(req):
     global packetHandler
     global portHandler
-    global torque_state
+    global lock_vec
     go.acquire()
     ok, _ = packetHandler.write2ByteTxRx(port=portHandler,
                                            dxl_id=req.id,
                                            address=24,  # TORQUE
                                            data=req.mode)
-    torque_state[req.id - 1] = bool(req.mode)
+    lock_vec[req.id - 1] = bool(req.mode)
     ret_data, _, _ = packetHandler.readTxRx(portHandler, req.id, 30, 2)
-    goals[req.id - 1] = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
+    goal_vec[req.id - 1] = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
     go.release()
     return TorqueResponse(ok == sdk.COMM_SUCCESS)
 
@@ -65,7 +68,7 @@ def torque_all(req):
     global packetHandler
     global cont
     global portHandler
-    global torque_state
+    global lock_vec
     go.acquire()
     ok = sdk.COMM_SUCCESS
     for i in range(1, cont + 1):
@@ -73,9 +76,9 @@ def torque_all(req):
                                                dxl_id=i,
                                                address=24,  # TORQUE
                                                data=req.mode)
-        torque_state[i - 1] = bool(req.mode)
+        lock_vec[i - 1] = bool(req.mode)
         ret_data, _, _ = packetHandler.readTxRx(portHandler, i, 30, 2)
-        goals[i - 1] = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
+        goal_vec[i - 1] = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
 
     go.release()
     #FIXME we check only the last returned code
@@ -86,11 +89,15 @@ def motor_monitor():
     rospy.init_node('motor_monitor', anonymous=True)
 
     pub = []
+    sys_pub = rospy.Publisher('system_state', SystemState, queue_size=2)
 
     global packetHandler
     global cont
-    global torque_state
-    global goals
+    global lock_vec
+    global goal_vec
+    global pos_vec
+    global speed_vec
+    global load_vec
     for i in range(1, cont + 1):
         pub.append(rospy.Publisher('motors_info/%d' % i, MotorInfo, queue_size=2))
         packetHandler.writeTxRx(port=portHandler,
@@ -139,10 +146,13 @@ def motor_monitor():
                                 address=48,  # PUNCH
                                 length=2,
                                 data=[32, 0])  # VALUE: 64
-        torque_state[i - 1] = True
+        lock_vec[i - 1] = True
     motor_msg = MotorInfo()
+    motor_msg.header.frame_id = "motor"
+    system_state = SystemState()
+    system_state.header.frame_id = "system"
+    system_state.count = cont
 
-    rate = rospy.Rate(1000)
     while not rospy.is_shutdown():
         for i in range(1, cont + 1):
             go.acquire()
@@ -150,25 +160,30 @@ def motor_monitor():
                                                 dxl_id=i,
                                                 address=36,  # POSITION | SPEED | LOAD
                                                 length=6)
-            motor_msg.Locked = torque_state[i - 1]
+            motor_msg.Locked = lock_vec[i - 1]
             go.release()
             if len(data) != 6: continue
-            pos = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
-            speed = sdk.DXL_MAKEWORD(ret_data[2], ret_data[3])
-            load = sdk.DXL_MAKEWORD(ret_data[4], ret_data[5])
+            pos_vec[i-1] = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
+            speed_vec[i-1] = sdk.DXL_MAKEWORD(ret_data[2], ret_data[3])
+            load_vec[i-1] = sdk.DXL_MAKEWORD(ret_data[4], ret_data[5])
 
-            motor_msg.header.frame_id = "motors"
             motor_msg.header.stamp = rospy.Time.now()
-            motor_msg.Pos = pos
-            motor_msg.Speed = speed if speed < 1024 else 1024 - speed
-            motor_msg.Load = load if load < 1024 else 1024 - load
-            motor_msg.Goal = goals[i - 1]
+            motor_msg.Pos = pos_vec[i-1]
+            motor_msg.Speed = speed_vec[i-1] if speed_vec[i-1] < 1024 else 1024 - speed_vec[i-1]
+            motor_msg.Load = load_vec[i-1] if load_vec[i-1] < 1024 else 1024 - load_vec[i-1]
+            motor_msg.Goal = goal_vec[i-1]
+            motor_msg.Locked = lock_vec[i-1]
 
             pub[i - 1].publish(motor_msg)
 
-        # rospy.loginfo(motor_msg)
+            system_state.header.stamp = motor_msg.header.stamp
+            system_state.Pos = pos_vec
+            system_state.Speed = speed_vec
+            system_state.Load = load_vec
+            system_state.Goal = goal_vec
+            system_state.Lock = lock_vec
 
-        rate.sleep()
+            sys_pub.publish(system_state)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

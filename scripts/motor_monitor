@@ -22,7 +22,8 @@ lock_vec = [False for i in range(0, cont)]
 
 for i in range(0, cont):
     data, _, _ = packetHandler.readTxRx(portHandler, i + 1, 30, 2)
-    goal_vec[i] = sdk.DXL_MAKEWORD(data[0], data[1])
+    print data
+    goal_vec[i] = sdk.DXL_MAKEWORD(data[0], data[1]) / 1024.0 * 300 - 180 # -180 <-> +120 range for VREP
 
 
 def move_motor(req):
@@ -42,8 +43,31 @@ def move_motor(req):
                                            dxl_id=req.id,
                                            address=30,  # GOAL
                                            data=req.pos)
-    goal_vec[req.id - 1] = req.pos
+    goal_vec[req.id - 1] = req.pos / 1024.0 * 300 -180   # -180 <-> +120 range for VREP
     lock_vec[req.id - 1] = True
+    go.release()
+    return MoveMotorResponse(ok == sdk.COMM_SUCCESS)
+    
+def move_all_motor(req):
+    global packetHandler
+    global portHandler
+    global goal_vec
+    go.acquire()
+    for i in range(1, cont + 1):
+      ok, _ = packetHandler.write2ByteTxRx(port=portHandler,
+                                             dxl_id=i,
+                                             address=24,  # TORQUE
+                                             data=1)
+      ok, _ = packetHandler.write2ByteTxRx(port=portHandler,
+                                             dxl_id=i,
+                                             address=32,  # SPEED
+                                             data=req.vel[i-1])
+      ok, _ = packetHandler.write2ByteTxRx(port=portHandler,
+                                             dxl_id=i,
+                                             address=30,  # GOAL
+                                             data=(req.pos[i-1] + 180)/300.0*1024) #conversion from VREP to 0-1024 range
+      goal_vec[i-1] = req.pos  # -180 <-> +120 range for VREP
+      lock_vec[i-1] = True
     go.release()
     return MoveMotorResponse(ok == sdk.COMM_SUCCESS)
 
@@ -98,6 +122,7 @@ def motor_monitor():
     global pos_vec
     global speed_vec
     global load_vec
+
     for i in range(1, cont + 1):
         pub.append(rospy.Publisher('motors_info/%d' % i, MotorInfo, queue_size=2))
         packetHandler.writeTxRx(port=portHandler,
@@ -147,6 +172,7 @@ def motor_monitor():
                                 length=2,
                                 data=[32, 0])  # VALUE: 64
         lock_vec[i - 1] = True
+
     motor_msg = MotorInfo()
     motor_msg.header.frame_id = "motor"
     system_state = SystemState()
@@ -162,15 +188,21 @@ def motor_monitor():
                                                 length=6)
             motor_msg.Locked = lock_vec[i - 1]
             go.release()
-            if len(data) != 6: continue
-            pos_vec[i-1] = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
-            speed_vec[i-1] = sdk.DXL_MAKEWORD(ret_data[2], ret_data[3])
-            load_vec[i-1] = sdk.DXL_MAKEWORD(ret_data[4], ret_data[5])
+            if len(ret_data) != 6: continue
+            
+            pos = sdk.DXL_MAKEWORD(ret_data[0], ret_data[1])
+            speed = sdk.DXL_MAKEWORD(ret_data[2], ret_data[3])
+            load = sdk.DXL_MAKEWORD(ret_data[4], ret_data[5])
+            
+            pos_vec[i-1] = pos / 1024.0 * 300 -180  # -180 <-> +120 range for VREP
+            speed_vec[i-1] = speed
+            load_vec[i-1] = load
 
             motor_msg.header.stamp = rospy.Time.now()
-            motor_msg.Pos = pos_vec[i-1]
-            motor_msg.Speed = speed_vec[i-1] if speed_vec[i-1] < 1024 else 1024 - speed_vec[i-1]
-            motor_msg.Load = load_vec[i-1] if load_vec[i-1] < 1024 else 1024 - load_vec[i-1]
+            motor_msg.Id = i
+            motor_msg.Pos = pos
+            motor_msg.Speed = speed if speed < 1024 else 1024 - speed
+            motor_msg.Load = load if load < 1024 else 1024 - load
             motor_msg.Goal = goal_vec[i-1]
             motor_msg.Locked = lock_vec[i-1]
 
@@ -181,16 +213,16 @@ def motor_monitor():
             system_state.Speed = speed_vec
             system_state.Load = load_vec
             system_state.Goal = goal_vec
-            system_state.Lock = lock_vec
+            system_state.Locked = lock_vec
 
             sys_pub.publish(system_state)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
-
 if __name__ == '__main__':
     s1 = rospy.Service('move_motor', MoveMotor, move_motor)
-    s2 = rospy.Service('torque_motor', Torque, torque_motor)
-    s3 = rospy.Service('torque_all', TorqueAll, torque_all)
+    s2 = rospy.Service('move_all_motor', MoveAllMotor, move_all_motor)
+    s3 = rospy.Service('torque_motor', Torque, torque_motor)
+    s4 = rospy.Service('torque_all', TorqueAll, torque_all)
     motor_monitor()
